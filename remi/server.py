@@ -14,6 +14,7 @@
    limitations under the License.
 """
 import logging
+
 try:
     from http.server import HTTPServer, BaseHTTPRequestHandler
 except ImportError:
@@ -36,6 +37,7 @@ import signal
 import time
 import os
 import re
+
 try:
     from urllib import unquote
     from urllib import quote
@@ -60,11 +62,11 @@ def gzip_encode(content):
     data = gzip_compress.compress(content) + gzip_compress.flush()
     return data
 
+
 clients = {}
 runtimeInstances = weakref.WeakValueDictionary()
 
 pyLessThan3 = sys.version_info < (3,)
-
 
 _MSG_ACK = '3'
 _MSG_JS = '2'
@@ -106,12 +108,12 @@ def get_method_by_id(_id):
 def parse_session_cookie(cookie_to_cook):
     """ cookie_to_cook = http_header['cookie']
     """
-    #print("cookie_to_cook: %s"%str(cookie_to_cook))
+    # print("cookie_to_cook: %s"%str(cookie_to_cook))
     session_value = None
     tokens = cookie_to_cook.split(";")
     for tok in tokens:
         if 'remi_session=' in tok:
-            #print("found session id: %s"%str(tok))
+            # print("found session id: %s"%str(tok))
             try:
                 session_value = int(tok.replace('remi_session=', ''))
             except Exception:
@@ -120,7 +122,6 @@ def parse_session_cookie(cookie_to_cook):
 
 
 class WebSocketsHandler(socketserver.StreamRequestHandler):
-
     magic = b'258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
     def __init__(self, headers, request, client_address, server, *args, **kwargs):
@@ -201,8 +202,8 @@ class WebSocketsHandler(socketserver.StreamRequestHandler):
             message = message.encode('utf-8')
         out = out + message
 
-        readable, writable, errors = select.select([], [self.request,], [], self.server.websocket_timeout_timer_ms) #last parameter is timeout, when 0 is non blocking
-        #self._log.debug('socket status readable=%s writable=%s errors=%s'%((self.request in readable), (self.request in writable), (self.request in error$
+        readable, writable, errors = select.select([], [self.request, ], [], self.server.websocket_timeout_timer_ms)  # last parameter is timeout, when 0 is non blocking
+        # self._log.debug('socket status readable=%s writable=%s errors=%s'%((self.request in readable), (self.request in writable), (self.request in error$
         writable = self.request in writable
         if not writable:
             return False
@@ -214,14 +215,14 @@ class WebSocketsHandler(socketserver.StreamRequestHandler):
         key = self.headers['Sec-WebSocket-Key']
         self.session = None
         if 'cookie' in self.headers:
-            if self.headers['cookie']!=None:
+            if self.headers['cookie'] != None:
                 self.session = parse_session_cookie(self.headers['cookie'])
         if self.session == None:
             return False
         if not self.session in clients.keys():
             return False
 
-        digest = hashlib.sha1((key.encode("utf-8")+self.magic))
+        digest = hashlib.sha1((key.encode("utf-8") + self.magic))
         digest = digest.digest()
         digest = base64.b64encode(digest)
         response = 'HTTP/1.1 101 Switching Protocols\r\n'
@@ -232,7 +233,7 @@ class WebSocketsHandler(socketserver.StreamRequestHandler):
         self.request.sendall(response.encode("utf-8"))
         self.handshake_done = True
 
-        #if an update happens since the websocket connection to its handshake, 
+        # if an update happens since the websocket connection to its handshake,
         # it gets not displayed. it is required to inform App about handshake done, 
         # to get a full refresh
         clients[self.session].websocket_handshake_done(self)
@@ -262,7 +263,7 @@ class WebSocketsHandler(socketserver.StreamRequestHandler):
                         widget_id = chunks[1]
                         function_name = chunks[2]
                         params = message[
-                            len(msg_type) + len(widget_id) + len(function_name) + 3:]
+                                 len(msg_type) + len(widget_id) + len(function_name) + 3:]
 
                         param_dict = parse_parametrs(params)
 
@@ -305,7 +306,6 @@ def parse_parametrs(p):
 
 # noinspection PyPep8Naming
 class App(BaseHTTPRequestHandler, object):
-
     """
     This class will handles any incoming request from the browser
     The main application class can subclass this
@@ -314,7 +314,7 @@ class App(BaseHTTPRequestHandler, object):
         - file requests
     """
 
-    re_static_file = re.compile(r"^([\/]*[\w\d]+:[-_. $@?#£'%=()\/\[\]!+°§^,\w\d]+)") #https://regex101.com/r/uK1sX1/6
+    re_static_file = re.compile(r"^([\/]*[\w\d]+:[-_. $@?#£'%=()\/\[\]!+°§^,\w\d]+)")  # https://regex101.com/r/uK1sX1/6
     re_attr_call = re.compile(r"^/*(\w+)\/(\w+)\?{0,1}(\w*\={1}(\w|\.)+\&{0,1})*$")
 
     def __init__(self, request, client_address, server, **app_args):
@@ -344,28 +344,28 @@ class App(BaseHTTPRequestHandler, object):
         """
 
         self.session = 0
-        #checking previously defined session
+        # checking previously defined session
         if 'cookie' in self.headers:
             self.session = parse_session_cookie(self.headers['cookie'])
-            #if not a valid session id
+            # if not a valid session id
             if self.session == None:
                 self.session = 0
             if not self.session in clients.keys():
                 self.session = 0
 
-        #if no session id
+        # if no session id
         if self.session == 0:
             if self.server.multiple_instance:
-                self.session = int(time.time()*1000)
-            #send session to browser
+                self.session = int(time.time() * 1000)
+            # send session to browser
             del self.headers['cookie']
 
-        #if the client instance doesn't exist
-        if not(self.session in clients):
+        # if the client instance doesn't exist
+        if not (self.session in clients):
             self.update_interval = self.server.update_interval
 
             from remi import gui
-            
+
             head = gui.HEAD(self.server.title)
             # use the default css, but append a version based on its hash, to stop browser caching
             head.add_child('internal_css', "<link href='/res:style.css' rel='stylesheet' />\n")
@@ -398,7 +398,7 @@ class App(BaseHTTPRequestHandler, object):
             runtimeInstances[str(id(self))] = self
             clients[self.session] = self
         else:
-            #restore instance attributes
+            # restore instance attributes
             client = clients[self.session]
 
             self.websockets = client.websockets
@@ -410,8 +410,8 @@ class App(BaseHTTPRequestHandler, object):
             self._need_update_flag = client._need_update_flag
             if hasattr(client, '_update_thread'):
                 self._update_thread = client._update_thread
-                
-        net_interface_ip = self.headers.get('Host', "%s:%s"%(self.connection.getsockname()[0],self.server.server_address[1]))
+
+        net_interface_ip = self.headers.get('Host', "%s:%s" % (self.connection.getsockname()[0], self.server.server_address[1]))
         websocket_timeout_timer_ms = str(self.server.websocket_timeout_timer_ms)
         pending_messages_queue_length = str(self.server.pending_messages_queue_length)
         self.page.children['head'].set_internal_js(str(id(self)), net_interface_ip, pending_messages_queue_length, websocket_timeout_timer_ms)
@@ -447,7 +447,7 @@ class App(BaseHTTPRequestHandler, object):
 
     def _need_update(self, emitter=None, child_ignore_update=False):
         if child_ignore_update:
-            #the widgets tree is processed to make it available for a intentional 
+            # the widgets tree is processed to make it available for a intentional
             # client update and to reset the changed flags of changed widget.
             # Otherwise it will be updated on next update cycle.
             changed_widget_dict = {}
@@ -455,12 +455,12 @@ class App(BaseHTTPRequestHandler, object):
             return
 
         if self.update_interval == 0:
-            #no interval, immadiate update
+            # no interval, immadiate update
             self.do_gui_update()
         else:
-            #will be updated after idle loop
+            # will be updated after idle loop
             self._need_update_flag = True
-                
+
     def do_gui_update(self):
         """ This method gets called also by Timer, a new thread, and so needs to lock the update
         """
@@ -489,26 +489,26 @@ class App(BaseHTTPRequestHandler, object):
 
         msg = "0" + self.root.identifier + ',' + to_websocket(self.page.children['body'].innerHTML({}))
         self._send_spontaneous_websocket_message(msg)
-        
+
     def _send_spontaneous_websocket_message(self, message):
         for ws in list(self.websockets):
             # noinspection PyBroadException
             try:
                 if ws.send_message(message):
-                    #if message sent ok, continue with nect client
+                    # if message sent ok, continue with nect client
                     continue
             except Exception:
                 self._log.error("sending websocket spontaneous message", exc_info=True)
 
             self._log.debug("removing websocket instance, communication error with client")
-            #here arrives if the message was not sent ok, then the client is removed
+            # here arrives if the message was not sent ok, then the client is removed
             try:
                 self.websockets.remove(ws)
             except Exception:
-                pass # happens when there are multiple clients
+                pass  # happens when there are multiple clients
             else:
                 ws.close(terminate_server=False)
-            
+
     def execute_javascript(self, code):
         self._send_spontaneous_websocket_message(_MSG_JS + code)
 
@@ -587,7 +587,7 @@ class App(BaseHTTPRequestHandler, object):
         # if this is a ws req, instance a ws handler, add it to App's ws list, return
         if "Upgrade" in self.headers:
             if self.headers['Upgrade'].lower() == 'websocket':
-                #passing arguments to websocket handler, otherwise it will lost the last message, 
+                # passing arguments to websocket handler, otherwise it will lost the last message,
                 # and will be unable to handshake
                 ws = WebSocketsHandler(self.headers, self.request, self.client_address, self.server)
                 return
@@ -624,16 +624,16 @@ class App(BaseHTTPRequestHandler, object):
                 self._log.error('error processing GET request', exc_info=True)
 
     def _get_static_file(self, filename):
-        filename = filename.replace("..", "") #avoid backdirs
+        filename = filename.replace("..", "")  # avoid backdirs
         __i = filename.find(':')
         if __i < 0:
             return None
         key = filename[:__i]
-        path = filename[__i+1:]
-        key = key.replace("/","")
+        path = filename[__i + 1:]
+        key = key.replace("/", "")
         paths = {'res': os.path.join(os.path.dirname(__file__), "res")}
         static_paths = self._app_args.get('static_file_path', {})
-        if not type(static_paths)==dict:
+        if not type(static_paths) == dict:
             self._log.error("App's parameter static_file_path must be a Dictionary.", exc_info=False)
             static_paths = {}
         paths.update(static_paths)
@@ -649,30 +649,71 @@ class App(BaseHTTPRequestHandler, object):
 
         if (func == '/') or (not func):
             self.send_response(200)
-            self.send_header("Set-Cookie", "remi_session=%s; SameSite=Lax"%(self.session))
+            self.send_header("Set-Cookie", "remi_session=%s; SameSite=Lax" % (self.session))
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-            
+
             with self.update_lock:
                 # render the HTML
                 page_content = self.page.repr()
 
             self.wfile.write(encode_text("<!DOCTYPE html>\n"))
             self.wfile.write(encode_text(page_content))
-            
+
         elif static_file:
             filename = self._get_static_file(static_file.groups()[0])
             if not filename:
                 self.send_response(404)
                 return
             mimetype, encoding = mimetypes.guess_type(filename)
-            self.send_response(200)
+            response_code = 200
+            content = None
+            send_response_code = None
+            with open(filename, 'rb') as f:
+                content = f.read()
+            for k in self.headers:
+                if k.lower() == 'range':
+                    self._log.info('开始断点续传')
+                    self._log.info(self.headers)
+                    range_value = self.headers[k]
+                    range_value_comp = re.compile(r'bytes=([0-9]+)\-(([0-9]+)?)')
+                    m = re.match(range_value_comp, range_value)
+                    if m:
+                        start_range = m.group(1)
+                        start = int(start_range)
+                        end_range = m.group(2)
+                        if len(end_range) > 0:
+                            end = int(end_range)
+                        else:
+                            end = -1
+                        print(start, end_range, len(content))
+                        if end == len(content) -1:
+                            response_code = 200
+                        else:
+                            response_code = 206
+                        self.send_response(response_code)
+                        send_response_code = True
+                        if end == -1:
+                            # headers['Content-Length'] = str(len(content) - start)
+                            self.send_header('Content-Length', str(len(content) - start))
+                        else:
+                            # headers['Content-Length'] = str(end - start + 1
+                            self.send_header('Content-Length', str(end - start + 1))
+                        if end < 0:
+                            content_range_header_value = "bytes %d-%d/%d" % (start, len(content) - 1, len(content))
+                            content = content[start:len(content)]
+                        else:
+                            content_range_header_value = "bytes %d-%d/%d" % (start, end, len(content))
+                            content = content[start:end + 1]
+                        # headers['Content-Range'] = content_range_header_value
+                        self.send_header('Content-Range', content_range_header_value)
+            if not send_response_code:
+                self.send_response(response_code)
             self.send_header('Content-type', mimetype if mimetype else 'application/octet-stream')
             if self.server.enable_file_cache:
                 self.send_header('Cache-Control', 'public, max-age=86400')
             self.end_headers()
-            with open(filename, 'rb') as f:
-                content = f.read()
+            if content:
                 self.wfile.write(content)
         elif attr_call:
             with self.update_lock:
@@ -680,14 +721,14 @@ class App(BaseHTTPRequestHandler, object):
                 # parse_qs returns patameters as list, here we take the first element
                 for k in param_dict:
                     param_dict[k] = param_dict[k][0]
-
                 widget, func = attr_call.group(1, 2)
                 try:
                     content, headers = get_method_by_name(get_method_by_id(widget), func)(**param_dict)
                     if content is None:
                         self.send_response(503)
                         return
-                    self.send_response(200)
+                    response_code = 200
+                    self.send_response(response_code)
                 except IOError:
                     self._log.error('attr %s/%s call error' % (widget, func), exc_info=True)
                     self.send_response(404)
@@ -727,7 +768,7 @@ class App(BaseHTTPRequestHandler, object):
         """ WebPage Event that occurs on webpage errors
         """
         self._log.debug("""App.onerror event occurred in webpage: 
-            \nMESSAGE:%s\nSOURCE:%s\nLINENO:%s\nCOLNO:%s\ERROR:%s\n"""%(message, source, lineno, colno, error))
+            \nMESSAGE:%s\nSOURCE:%s\nLINENO:%s\nCOLNO:%s\ERROR:%s\n""" % (message, source, lineno, colno, error))
 
     def ononline(self, emitter):
         """ WebPage Event that occurs on webpage goes online after a disconnection
@@ -747,11 +788,10 @@ class App(BaseHTTPRequestHandler, object):
     def onresize(self, emitter, width, height):
         """ WebPage Event that occurs on webpage gets resized
         """
-        self._log.debug('App.onresize event occurred. Width:%s Height:%s'%(width, height))
+        self._log.debug('App.onresize event occurred. Width:%s Height:%s' % (width, height))
 
 
 class ThreadedHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
-
     daemon_threads = False
 
     # noinspection PyPep8Naming
@@ -773,7 +813,7 @@ class ThreadedHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
         self.certfile = certfile
         self.keyfile = keyfile
         self.ssl_version = ssl_version
-        if self.ssl_version!=None:
+        if self.ssl_version != None:
             self.socket = ssl.wrap_socket(self.socket, keyfile=self.keyfile, certfile=self.certfile, server_side=True, ssl_version=self.ssl_version, do_handshake_on_connect=True)
 
 
@@ -781,8 +821,8 @@ class Server(object):
     # noinspection PyShadowingNames
     def __init__(self, gui_class, title='', start=True, address='127.0.0.1', port=0, username=None, password=None,
                  multiple_instance=False, enable_file_cache=True, update_interval=0.1, start_browser=True,
-                 websocket_timeout_timer_ms=1000, pending_messages_queue_length=1000, 
-                 certfile=None, keyfile=None, ssl_version=None,  userdata=()):
+                 websocket_timeout_timer_ms=1000, pending_messages_queue_length=1000,
+                 certfile=None, keyfile=None, ssl_version=None, userdata=()):
 
         self._gui = gui_class
         self._title = title or gui_class.__name__
@@ -830,19 +870,19 @@ class Server(object):
         self._sserver = ThreadedHTTPServer((self._address, self._sport), self._gui, self._auth,
                                            self._multiple_instance, self._enable_file_cache,
                                            self._update_interval, self._websocket_timeout_timer_ms,
-                                           self._pending_messages_queue_length, self._title, 
+                                           self._pending_messages_queue_length, self._title,
                                            self, self._certfile, self._keyfile, self._ssl_version, *self._userdata)
         shost, sport = self._sserver.socket.getsockname()[:2]
-        self._log.info('Started httpserver http://%s:%s/'%(shost,sport))
+        self._log.info('Started httpserver http://%s:%s/' % (shost, sport))
         # when listening on multiple net interfaces the browsers connects to localhost
         if shost == '0.0.0.0':
             shost = '127.0.0.1'
-        self._base_address = 'http://%s:%s/' % (shost,sport)
+        self._base_address = 'http://%s:%s/' % (shost, sport)
         if self._start_browser:
             try:
                 import android
                 android.webbrowser.open(self._base_address)
-            except (ImportError, AttributeError):
+            except ImportError:
                 # use default browser instead of always forcing IE on Windows
                 if os.name == 'nt':
                     webbrowser.get('windows-default').open(self._base_address)
@@ -861,6 +901,7 @@ class Server(object):
                 self.stop()
                 self._log.info('*** signal %d received.' % sig)
                 return signal.SIG_IGN
+
             prev_handler = signal.signal(signal.SIGINT, sig_manager)
         except Exception:
             # signal.pause() is missing for Windows; wait 1ms and loop instead
@@ -917,10 +958,9 @@ def start(main_gui_class, **kwargs):
     logging.basicConfig(level=logging.DEBUG if debug else logging.INFO,
                         format='%(name)-16s %(levelname)-8s %(message)s')
     logging.getLogger('remi').setLevel(
-            level=logging.DEBUG if debug else logging.INFO)
+        level=logging.DEBUG if debug else logging.INFO)
 
     if standalone:
         s = StandaloneServer(main_gui_class, start=True, **kwargs)
     else:
         s = Server(main_gui_class, start=True, **kwargs)
-
