@@ -673,8 +673,8 @@ class App(BaseHTTPRequestHandler, object):
                 content = f.read()
             for k in self.headers:
                 if k.lower() == 'range':
-                    self._log.info('开始断点续传')
-                    self._log.info(self.headers)
+                    self._log.info('Start resumable pass.')
+                    # self._log.info(self.headers)
                     range_value = self.headers[k]
                     range_value_comp = re.compile(r'bytes=([0-9]+)\-(([0-9]+)?)')
                     m = re.match(range_value_comp, range_value)
